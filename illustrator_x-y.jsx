@@ -15,7 +15,7 @@ dlg.size = [250,250];
 dlg.intro = dlg.add('statictext', [20,20,150,40] );
 dlg.intro.text = 'First select 1 or 2 items';
 
-dlg.where = dlg.add('dropdownlist', [20,40,150,60] );
+dlg.where = dlg.add('dropdownlist', [20,40,150,60]);
 dlg.where.selection = dlg.where.add('item', 'top');
 dlg.where.add('item', 'bottom');
 dlg.where.add('item', 'left');
@@ -24,16 +24,15 @@ dlg.where.add('item', 'right');
 dlg.btn = dlg.add('button', [20,70,150,90], 'Specify', 'spec');
 
 
-
 // document
 var doc = activeDocument;
 
 // spec layer
 try {
-	var speclayer =doc.layers['spec'];
+	var speclayer =doc.layers['Izmers'];
 } catch(err) {
 	var speclayer = doc.layers.add();
-	speclayer.name = 'spec';
+	speclayer.name = 'Izmers';
 }
 
 // measurement line color
@@ -42,34 +41,36 @@ color.green = 255;
 color.blue = 0;
 
 // gap between measurement lines and object
-var gap = 2;
+var gap = 5;
 
 // size of measurement lines.
 var size = 10;
 
-// number of decimal places
-var decimals = 0;
 
-// pixels per inch
-var dpi = 72;
+// ----------------------------------------------------------------------------------------------------------------------------------------
+
+	if (doc.selection.length==1) {
+		specSingle( doc.selection[0].geometricBounds, "top" );
+		specSingle( doc.selection[0].geometricBounds, "left" );
+//		specSingle( doc.selection[0].geometricBounds, "bottom" );
+//		specSingle( doc.selection[0].geometricBounds, "right" );
+	} else if (doc.selection.length==2) {
+		dlg.btn.addEventListener ('click', startSpec );
+		dlg.show();
+	} else {
+			alert('please select 1 or 2 items');
+	}
+
+// ----------------------------------------------------------------------------------------------------------------------------------------
+
 
 /**
 	Start the spec
 */
 function startSpec() {
-	
-	if (doc.selection.length==1) {
-		specSingle( doc.selection[0].geometricBounds, dlg.where.selection.text );
-	} else if (doc.selection.length==2) {
-		specDouble( doc.selection[0], doc.selection[1], dlg.where.selection.text );
-	} else {
-			alert('please select 1 or 2 items');
-	}
-
+	specDouble( doc.selection[0], doc.selection[1], dlg.where.selection.text );
 	dlg.close ();
 }
-
-
 
 
 /**
@@ -142,10 +143,14 @@ function specDouble( item1, item2, where ) {
 */
 function specSingle( bound, where ) {
 
-	
-	// width and height
-	var w = bound[2]-bound[0];
-	var h = bound[1]-bound[3];
+	var ptWidth = bound[2] - bound[0];
+	var ptHeight = bound[1] - bound[3];
+	var tmpWidth = Math.round(ptWidth / 0.02834645);
+	var tmpHeight = Math.round(ptHeight / 0.02834645);
+	var w = tmpWidth / 100;
+	var h = tmpHeight / 100;
+	var xCentre = bound[0] + (ptWidth / 2);
+	var yCentre = bound[1] - (ptHeight / 2);
 
 	// a & b are the horizontal or vertical positions that change
 	// c is the horizontal or vertical position that doesn't change
@@ -160,7 +165,6 @@ function specSingle( bound, where ) {
 	var dir = 1;
 	
 	switch( where ) {
-	
 		case 'top':
 			a = bound[0];
 			b = bound[2];
@@ -168,7 +172,6 @@ function specSingle( bound, where ) {
 			xy = 'x';
 			dir = 1;
 			break;
-		
 		case 'bottom':
 			a = bound[0];
 			b = bound[2];
@@ -176,7 +179,6 @@ function specSingle( bound, where ) {
 			xy = 'x';
 			dir = -1;
 			break;
-			
 		case 'left':
 			a = bound[1];
 			b = bound[3];
@@ -184,7 +186,6 @@ function specSingle( bound, where ) {
 			xy = 'y';
 			dir = -1;
 			break;
-			
 		case 'right':
 			a = bound[1];
 			b = bound[3];
@@ -192,7 +193,6 @@ function specSingle( bound, where ) {
 			xy = 'y';
 			dir = 1;
 			break;
-		
 	}
 
 	// create the measurement lines
@@ -201,53 +201,63 @@ function specSingle( bound, where ) {
 	// horizontal measurement
 	if (xy=='x') {
 		
-		// 2 vertical lines
+		// 2 vertical lines    |                      |
+		
 		lines[0]= new Array( new Array(a, c+(gap)*dir) );
 		lines[0].push ( new Array(a, c+(gap+size)*dir) );
 		lines[1]= new Array( new Array(b, c+(gap)*dir) );
 		lines[1].push( new Array(b, c+(gap+size)*dir) );
 		
-		// 1 horizontal line
-		lines[2]= new Array( new Array(a, c+(gap+size/2)*dir ) );
+		// 1 horizontal line   ________        _________
+		
+		lines[2]= new Array( new Array(xCentre + 30, c+(gap+size/2)*dir ) );
 		lines[2].push( new Array(b, c+(gap+size/2)*dir ) );
+		
+		lines[3]= new Array( new Array(a, c+(gap+size/2)*dir ) );
+		lines[3].push( new Array(xCentre - 30, c+(gap+size/2)*dir ) );	
+		
 		
 		// create text label
 		if (where=='top') {
 			var t = specLabel( w, (a+b)/2, lines[0][1][1] );
-			t.top += t.height;
 		} else {
 			var t = specLabel( w, (a+b)/2, lines[0][0][1] );
-			t.top -= t.height;
 		}
-		t.left -= t.width/2;
+		
 		
 	// vertical measurement
 	} else {
 		
-		// 2 horizontal lines
+		// 2 horizontal lines   |                      |
+		//
 		lines[0]= new Array( new Array( c+(gap)*dir, a) );
 		lines[0].push ( new Array( c+(gap+size)*dir, a) );
 		lines[1]= new Array( new Array( c+(gap)*dir, b) );
 		lines[1].push( new Array( c+(gap+size)*dir, b) );
-		
-		//1 vertical line
-		lines[2]= new Array( new Array(c+(gap+size/2)*dir, a) );
+
+
+		//vertical line  ________        _________
+		//
+		lines[2]= new Array( new Array(c+(gap+size/2)*dir, yCentre - 30) );
 		lines[2].push( new Array(c+(gap+size/2)*dir, b) );
+		
+		lines[3]= new Array( new Array(c+(gap+size/2)*dir, a) );
+		lines[3].push( new Array(c+(gap+size/2)*dir, yCentre + 30) );
 		
 		// create text label
 		if (where=='left') {
-			var t = specLabel( h, lines[0][1][0], (a+b)/2 );
-			t.left -= t.width;
+			var t = specLabel( h, c-(gap+size), yCentre, true );
+			t.left += t.width/2;
 		} else {
-			var t = specLabel( h, lines[0][0][0], (a+b)/2 );
-			t.left += size;
+			var t = specLabel( h, c+(gap+size), yCentre, true );
+			t.left -= t.width/2;
 		}
-		t.top += t.height/2;
+		t.top += t.width/2;
 	}
 	
-	// draw the lines
 	var specgroup = new Array(t);
 	
+	// draw the lines
 	for (var i=0; i<lines.length; i++) {
 		var p = doc.pathItems.add();
 		p.setEntirePath ( lines[i] );
@@ -263,54 +273,28 @@ function specSingle( bound, where ) {
 /**
 	Create a text label that specify the dimension
 */
-function specLabel( val, x, y) {
+function specLabel( val, x, y, rotate) {
 		
 		var t = doc.textFrames.add();
 		t.textRange.characterAttributes.size = 8;
 		t.textRange.characterAttributes.alignment = StyleRunAlignmentType.center;
-
-		var v = val;
-		switch (doc.rulerUnits) {
-			case RulerUnits.Inches: 
-				v = val/dpi;
-				v = v.toFixed (decimals);
-				break;
-				
-			case RulerUnits.Centimeters:
-				v = val/(dpi/2.54);
-				v = v.toFixed (decimals);
-				break;
-				
-			case RulerUnits.Millimeters:
-				v = val/(dpi/25.4);
-				v = v.toFixed (decimals);
-				break;
-				
-			case RulerUnits.Picas:
-				v = val/(dpi/6);
-				var vd = v - Math.floor (v);
-				vd = 12*vd;
-				v =  Math.floor(v)+'p'+vd.toFixed (decimals);
-				break;
-				
-			default:
-				v = v.toFixed (decimals);
-		}
-		
+		var v = val + " mm";
 		t.contents = v;
 		t.top = y;
 		t.left = x;
-		
+		t.paragraphs[0].paragraphAttributes.justification = Justification.CENTER;
+		if (rotate==true) {
+			t.rotate (90);
+		}
 		return t;
-	
 }
+
 
 function setLineStyle(path, color) {
 		path.filled = false;
 		path.stroked = true;
 		path.strokeColor = color;
 		path.strokeWidth = 0.5;
-		
 		return path;
 }
 
@@ -335,14 +319,5 @@ function group( layer, items, isDuplicate) {
 			}
 		}
 	}
-	
 	return gg;
 }
-
-
-
-
-// ----------------------------------------------------------------------------------------------------------------------------------------
-
-dlg.btn.addEventListener ('click', startSpec );
-dlg.show();
